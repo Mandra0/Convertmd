@@ -114,7 +114,8 @@ if uploaded_files:
                 )
                 
             except Exception as e:
-                status_text.markdown(f"**❌ {file_name} Gagal!**")
+                status_text.markdown(f"**❌ {file_name} Gagal! Error: {e}**")
                 if st.button(f"💥 Hapus File Eror: {file_name}", key=f"err_{file_name}_{idx}", type="primary"):
                     st.session_state.hidden_errors.add(file_name)
                     st.rerun()
+
