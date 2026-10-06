@@ -1,6 +1,7 @@
 import streamlit as st
 from markitdown import MarkItDown
 import os
+import tempfile
 
 # 1. SET LAYOUT WIDE
 st.set_page_config(page_title="Universal Markdown Converter", page_icon="📝", layout="wide")
@@ -68,7 +69,7 @@ if uploaded_files:
         if file_name in st.session_state.hidden_errors:
             continue
             
-        # 1. CEK CACHE: File dari memori langsung dibuatkan border container
+        # 1. CEK CACHE
         if file_name in st.session_state.converted_cache:
             md_text = st.session_state.converted_cache[file_name]
             
@@ -83,21 +84,22 @@ if uploaded_files:
                 )
             continue 
             
-        # 2. PROSES BARU: Gunakan container tanpa dropdown
+        # 2. PROSES BARU menggunakan Tempfile
         with st.container(border=True):
             status_text = st.empty()
             status_text.markdown(f"**⏳ Mengonversi {file_name}...**")
             
             try:
-                temp_dir = "temp_conversion"
-                os.makedirs(temp_dir, exist_ok=True)
-                temp_file_path = os.path.join(temp_dir, file_name)
+                # Membuat file sementara yang aman di lingkungan Cloud Linux/Windows
+                with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
+                    temp_file.write(uploaded_file.getbuffer())
+                    temp_file_path = temp_file.name
                 
-                with open(temp_file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                
+                # Proses Konversi
                 result = md.convert(temp_file_path)
                 md_text = result.text_content
+                
+                # Hapus file sementara setelah berhasil agar tidak memakan RAM/Storage Cloud
                 os.remove(temp_file_path)
                 
                 st.session_state.converted_cache[file_name] = md_text
