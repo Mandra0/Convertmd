@@ -95,23 +95,26 @@ if uploaded_files:
                     temp_file.write(uploaded_file.getbuffer())
                     temp_file_path = temp_file.name
                 
-                # Proses Konversi
-                result = md.convert(temp_file_path)
-                md_text = result.text_content
-                
-                # Hapus file sementara setelah berhasil agar tidak memakan RAM/Storage Cloud
-                os.remove(temp_file_path)
-                
-                st.session_state.converted_cache[file_name] = md_text
-                
-                status_text.markdown(f"**✅ {file_name} Sukses Terconvert!**")
-                st.download_button(
-                    label=f"📥 Download {base_name}.md",
-                    data=md_text,
-                    file_name=f"{base_name}.md",
-                    mime="text/markdown",
-                    key=f"dl_{file_name}_{idx}"
-                )
+                try:
+                    # Proses Konversi
+                    result = md.convert(temp_file_path)
+                    md_text = result.text_content
+                    
+                    st.session_state.converted_cache[file_name] = md_text
+                    
+                    status_text.markdown(f"**✅ {file_name} Sukses Terconvert!**")
+                    st.download_button(
+                        label=f"📥 Download {base_name}.md",
+                        data=md_text,
+                        file_name=f"{base_name}.md",
+                        mime="text/markdown",
+                        key=f"dl_{file_name}_{idx}"
+                    )
+                finally:
+                    # Hapus file sementara setelah berhasil atau gagal agar tidak memakan RAM/Storage Cloud
+                    if os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
+
                 
             except Exception as e:
                 status_text.markdown(f"**❌ {file_name} Gagal! Error: {e}**")
