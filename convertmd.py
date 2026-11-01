@@ -1,6 +1,7 @@
 import io
 import os
 import tempfile
+import zipfile
 import streamlit as st
 from markitdown import MarkItDown
 
@@ -43,7 +44,7 @@ st.markdown("""
         color: white !important;
         border-radius: 6px !important;
     }
-    div[data-testid="stColumn"] .stButton>button, div[data-testid="stColumn"] .stLinkButton>a { font-size: 16px !important; padding: 8px 16px !important; }
+    div[data-testid="stColumn"] .stButton>button, div[data-testid="stColumn"] .stDownloadButton>button, div[data-testid="stColumn"] .stLinkButton>a { font-size: 16px !important; padding: 8px 16px !important; width: 100% !important; }
     div[data-testid="stVerticalBlockBorderWrapper"] .stButton>button[kind="primary"] { font-size: 16px !important; font-weight: bold !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -139,9 +140,8 @@ if "hidden_errors" not in st.session_state:
     st.session_state.hidden_errors = set()
 
 # Layout Tombol Header
-col_title, col_github, col_reset = st.columns([6, 1.2, 1.2])
-with col_github:
-    st.link_button("⭐ GitHub", "https://github.com/Mandra0/Convertmd", use_container_width=True)
+col_title, col_download, col_reset = st.columns([5.4, 1.3, 1.3])
+download_placeholder = col_download.empty()
 with col_reset:
     if st.button("🧹 Reset Semua", use_container_width=True, type="secondary"):
         st.session_state.hidden_errors.clear()
@@ -208,3 +208,41 @@ if uploaded_files:
                 if st.button(f"💥 Hapus File Eror: {file_name}", key=f"err_{file_name}_{idx}", type="primary"):
                     st.session_state.hidden_errors.add(file_name)
                     st.rerun()
+
+# Tombol Download Semua (ZIP)
+has_converted_files = False
+if uploaded_files:
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        used_names = set()
+        for f in uploaded_files:
+            if f.name in st.session_state.hidden_errors:
+                continue
+            cache_key = f"{f.name}_{f.size}"
+            if cache_key in st.session_state.converted_cache:
+                base_name, _ = os.path.splitext(f.name)
+                base_name = base_name if base_name else "document"
+                target_name = f"{base_name}.md"
+                counter = 1
+                while target_name in used_names:
+                    target_name = f"{base_name}_{counter}.md"
+                    counter += 1
+                used_names.add(target_name)
+                zip_file.writestr(target_name, st.session_state.converted_cache[cache_key])
+        
+        if used_names:
+            has_converted_files = True
+
+    if has_converted_files:
+        zip_buffer.seek(0)
+        download_placeholder.download_button(
+            label="📥 Download Semua",
+            data=zip_buffer.getvalue(),
+            file_name="converted_markdowns.zip",
+            mime="application/zip",
+            use_container_width=True,
+            key="dl_all_active"
+        )
+
+if not has_converted_files:
+    download_placeholder.button("📥 Download Semua", disabled=True, use_container_width=True, key="dl_all_disabled")
